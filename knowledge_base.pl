@@ -13,14 +13,24 @@ expression_tail --> [+], expression,{write("Reconhecido como soma"),nl}.
 expression_tail --> [-], expression,{write("Reconhecido como subtração"),nl}.
 expression_tail --> [*], expression,{write("Reconhecido como multiplicação"),nl}.
 add_op --> [+].
-expression_op --> [-].
-expression_op --> [*].
+sub_op --> [-].
+mult_op --> [*].
 
 literal --> [I], {integer(I)}.
 literal --> [C], {char_type(C,digit)}.
 variable --> [V], {atom_is_lower(V)}.
+truth_value --> [T],{member(T,[true,false])}.
 
+boolean_expression --> truth_value.
+boolean_expression --> expression, [=], expression.
+boolean_expression --> boolean_expression, [or], boolean_expression.
+boolean_expression --> [~], boolean_expression.
 
+command --> [nil].
+command --> variable, [:=], expression.
+command --> command, [;], command.
+command --> [if], boolean_expression, [then], command, [else], command.
+command --> [while], boolean_expression, [do], command.
 
 % what_is
 what_is(I,O):-string_chars(I,A), literal(A,[]), O = "literal".
@@ -48,7 +58,9 @@ tran(S, M, [K| C], [K|S], M, C):- literal([K],[]). %literal_tran
 tran(S,M,[K|C],[V|S],M,C):- read_memory(K,M,V). %var_tran
 
 %eval of SMC states
-eval([L1,L2 | _], _, [OP | _], Result):- add_op([OP],[]), Result is L1 + L2.
+eval([L1,L2 | _], _, [OP | _], Result):- add_op([OP],[]), literal([L1],_), literal([L2],_), Result is L1 + L2.
+eval([L1,L2 | _], _, [OP | _], Result):- sub_op([OP],[]), literal([L1],_), literal([L2],_), Result is L1 - L2.
+eval([L1,L2 | _], _, [OP | _], Result):- mult_op([OP],[]), literal([L1],_), literal([L2],_), Result is L1 * L2.
 
 %"Compile"
 compile_list(List,Result):- expression(List,_), tran([],_,List,S,M,C), eval(S,M,C,Result).
