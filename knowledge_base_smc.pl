@@ -1,5 +1,6 @@
 :- op(0, xfx, =>).
 :- op(800, xfx, =>).
+
 % -- grammar
 atom_is_lower(N) :-
     atom_chars(N, [L]),
@@ -14,12 +15,8 @@ expression_tail --> [].
 expression_tail --> [+], expression,{write("Reconhecido como soma"),nl}.
 expression_tail --> [-], expression,{write("Reconhecido como subtração"),nl}.
 expression_tail --> [*], expression,{write("Reconhecido como multiplicação"),nl}.
-add_op --> [+].
-sub_op --> [-].
-mult_op --> [*].
 
 literal --> [I], {integer(I)}.
-literal --> [C], {char_type(C,digit)}.
 variable --> [V], {atom_is_lower(V)}.
 truth_value--> [T],{member(T,[true,false])}.
 
@@ -41,9 +38,6 @@ what_is(I,O):-string_chars(I,A), literal(A,[]), O = "literal".
 what_is(I,O):-string_chars(I,A), variable(A,[]), O = "variable".
 what_is(I,O):-string_chars(I,A), expression(A,[]), O = "expression".
 
-% stack ops
-pop([X|List],X,List).
-push(X,List,[X|List]).
 
 % memory ops_dic
 update_memory(K, V, Dict_in, Dict_out):-put_dict([K=V], Dict_in, Dict_out).
@@ -66,6 +60,14 @@ write_smc_state(S,M,C):-
     Exp =.. [OP,E1,E2],
     member(OP,[;]).
 
+(S, M, [if(B,P1,P2)|C]) => ([P1,P2|S], M, [B, if|C]).                 
+(S, M, [while(B,P1)|C]) => ([B, P1|S], M, [B, while|C]).              
+
+([true, P1, _|S], M, [if|C]) => (S, M, [P1|C]).                      
+([false, _, P2|S], M, [if|C]) => (S, M, [P2|C]).                     
+([true, B, P1|S], M, [while|C]) => (S, M, [P1,while(B, P1)|C]).      
+([false, _, _|S], M, [while|C]) => (S, M, C).  
+
 %%%%%%% BOOLEAN EXPRESSION %%%%%%%%%%%%
 (S,M,[Bool|C]) => ([Bool | S], M , C):-
     truth_value([Bool],_).   	
@@ -74,6 +76,7 @@ write_smc_state(S,M,C):-
     literal([L1],_),literal([L2],_),
     member(OP,[=]),
     (call(L1=:=L2) ->   Value=true; Value=false).
+                     
 
 
 %%%%%%% EXPRESSIONS %%%%%%%%%%%%%%%%%%%
