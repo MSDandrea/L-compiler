@@ -77,7 +77,14 @@ write_smc_state(S,M,C):-
     member(OP,[=]),
     (call(L1=:=L2) ->   Value=true; Value=false).
                      
+(S,M,[not(B) | C]) => (S,M,[B, not| C]).
+([true | S],M,[not | C]) => ([false | S],M,C).
+([false | S],M,[not | C]) => ([true | S],M,C).
 
+(S,M,[or(B1,B2)| C]) => (S,M,[B1,B2,or| C]).
+([true,_ |S],M,[or|C]) => ([true | S],M,C).
+([_,true |S],M,[or|C]) => ([true | S],M,C).
+([false,false | S],M,[or|C]) => ([false|S],M,C).
 
 %%%%%%% EXPRESSIONS %%%%%%%%%%%%%%%%%%%
 ([L1,L2 | S], M, [OP|C]) => ([Result | S],M,C):-
