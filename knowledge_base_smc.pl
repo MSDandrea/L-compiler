@@ -61,7 +61,7 @@ write_smc_state(S,M,C):-
     member(OP,[;]).
 
 (S, M, [if(B,P1,P2)|C]) => ([P1,P2|S], M, [B, if|C]).                 
-(S, M, [while(B,P1)|C]) => ([B, P1|S], M, [B, while|C]).              
+(S, M, [while(B,P1)|C]) => ([B, P1|S], M, [B, while|C]).		
 
 ([true, P1, _|S], M, [if|C]) => (S, M, [P1|C]).                      
 ([false, _, P2|S], M, [if|C]) => (S, M, [P2|C]).                     
@@ -90,7 +90,7 @@ write_smc_state(S,M,C):-
 ([L1,L2 | S], M, [OP|C]) => ([Result | S],M,C):-
 	literal([L1],_),literal([L2],_),
     member(OP,[+,-,*]),
-	Expression =.. [OP,L1,L2],
+	Expression =.. [OP,L2,L1],
 	Result is Expression.
 
 
@@ -120,6 +120,7 @@ write_smc_state(S,M,C):-
 
 eval(Input, Output) :-
 	Input => Mid,
+	nl,nl,write("("),write(Input),write(")"),write(" => "),write("("),write(Mid),write(")"),
 	!,
 	eval(Mid, Output).
 eval(Output, Output).
