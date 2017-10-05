@@ -45,13 +45,26 @@ next_space(S):-
     Vn is V+1,
     nb_setval(mpt,Vn),
     S is Vn.
+
 % memory ops_dic
 update_memory(K, V, Dict_in, Dict_out):-put_dict([K=V], Dict_in, Dict_out).
 read_memory(K,Dict,Expected):- get_dict(K,Dict,Expected). 
 
 % environment_ops
-bind(Ei,K,V,Ef):- update_memory(K,V,Ei,Ef).
-mloc(Ei,Mi,K,V,Ef,Mf):- next_space(Id),update_memory(K,loc(Id),Ei,Ef),update_memory(Id,V,Mi,Mf),!.
+% bind constant to environment
+bind(Ei,K,V,Ef):- update_memory(K,V,Ei,Ef). 
+
+% put value in memory and reference in environment
+mloc(Ei,Mi,K,V,Ef,Mf):- 
+    read_memory(K,Ei,loc(P)) -> % checks if variable is already in memory, updates value if it is
+        update_memory(P,V,Mi,Mf), Ef = Ei; 
+    next_space(Id),update_memory(K,loc(Id),Ei,Ef),update_memory(Id,V,Mi,Mf),!. % find new space in memory and create var
+
+%read value of key either in environment or memory
+get_value(K,E,M,V):- 
+    read_memory(K,E,loc(T)) ->
+        read_memory(T,M,V);
+    read_memory(K,E,V).
 
 %SMC transitions tran(initial_S, initial_M, initial_C, final_S, final_M, final_C).
 write_smc_state(S,M,C):-
