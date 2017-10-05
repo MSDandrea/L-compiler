@@ -1,6 +1,8 @@
 :- op(0, xfx, =>).
 :- op(800, xfx, =>).
 
+:- nb_setval(mpt,0).
+
 % -- grammar
 atom_is_lower(N) :-
     atom_chars(N, [L]),
@@ -38,10 +40,18 @@ what_is(I,O):-string_chars(I,A), literal(A,[]), O = "literal".
 what_is(I,O):-string_chars(I,A), variable(A,[]), O = "variable".
 what_is(I,O):-string_chars(I,A), expression(A,[]), O = "expression".
 
-
+next_space(S):-
+    nb_getval(mpt,V),
+    Vn is V+1,
+    nb_setval(mpt,Vn),
+    S is Vn.
 % memory ops_dic
 update_memory(K, V, Dict_in, Dict_out):-put_dict([K=V], Dict_in, Dict_out).
 read_memory(K,Dict,Expected):- get_dict(K,Dict,Expected). 
+
+% environment_ops
+bind(Ei,K,V,Ef):- update_memory(K,V,Ei,Ef).
+mloc(Ei,Mi,K,V,Ef,Mf):- next_space(Id),update_memory(K,loc(Id),Ei,Ef),update_memory(Id,V,Mi,Mf),!.
 
 %SMC transitions tran(initial_S, initial_M, initial_C, final_S, final_M, final_C).
 write_smc_state(S,M,C):-
@@ -53,78 +63,78 @@ write_smc_state(S,M,C):-
     write(C),nl.
 
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
-(S,M,[nil| C]) => (S,M,C).
+(E,S,M,[nil| C]) => (E,S,M,C).
 
-(S,M,[Exp | C]) => (S,M,[E1,E2|C]):-
+(E,S,M,[Exp | C]) => (E,S,M,[E1,E2|C]):-
     compound(Exp),
     Exp =.. [OP,E1,E2],
     member(OP,[;]).
 
-(S, M, [if(B,P1,P2)|C]) => ([P1,P2|S], M, [B, if|C]).                 
-(S, M, [while(B,P1)|C]) => ([B, P1|S], M, [B, while|C]).		
+(E, S, M, [if(B,P1,P2)|C]) => (E, [P1,P2|S], M, [B, if|C]).                 
+(E, S, M, [while(B,P1)|C]) => (E, [B, P1|S], M, [B, while|C]).      
 
-([true, P1, _|S], M, [if|C]) => (S, M, [P1|C]).                      
-([false, _, P2|S], M, [if|C]) => (S, M, [P2|C]).                     
-([true, B, P1|S], M, [while|C]) => (S, M, [P1,while(B, P1)|C]).      
-([false, _, _|S], M, [while|C]) => (S, M, C).  
+(E, [true, P1, _|S], M, [if|C]) => (E, S, M, [P1|C]).                      
+(E, [false, _, P2|S], M, [if|C]) => (E, S, M, [P2|C]).                     
+(E, [true, B, P1|S], M, [while|C]) => (E, S, M, [P1,while(B, P1)|C]).      
+(E, [false, _, _|S], M, [while|C]) => (E, S, M, C).  
 
 %%%%%%% BOOLEAN EXPRESSION %%%%%%%%%%%%
-(S,M,[Bool|C]) => ([Bool | S], M , C):-
-    truth_value([Bool],_).   	
+(E, S,M,[Bool|C]) => (E, [Bool | S], M , C):-
+    truth_value([Bool],_).      
 
-([L1,L2 |S],M,[OP|C]) => ([Value | S],M,C):-
+(E,[L1,L2 |S],M,[OP|C]) => (E,[Value | S],M,C):-
     literal([L1],_),literal([L2],_),
     member(OP,[=]),
     (call(L1=:=L2) ->   Value=true; Value=false).
                      
-(S,M,[not(B) | C]) => (S,M,[B, not| C]).
-([true | S],M,[not | C]) => ([false | S],M,C).
-([false | S],M,[not | C]) => ([true | S],M,C).
+(E,S,M,[not(B) | C]) => (E,S,M,[B, not| C]).
+(E, [true | S],M,[not | C]) => (E, [false | S],M,C).
+(E, [false | S],M,[not | C]) => (E, [true | S],M,C).
 
-(S,M,[or(B1,B2)| C]) => (S,M,[B1,B2,or| C]).
-([true,_ |S],M,[or|C]) => ([true | S],M,C).
-([_,true |S],M,[or|C]) => ([true | S],M,C).
-([false,false | S],M,[or|C]) => ([false|S],M,C).
+(E,S,M,[or(B1,B2)| C]) => (E,S,M,[B1,B2,or| C]).
+(E,[true,_ |S],M,[or|C]) => (E,[true | S],M,C).
+(E,[_,true |S],M,[or|C]) => (E,[true | S],M,C).
+(E,[false,false | S],M,[or|C]) => (E,[false|S],M,C).
 
 %%%%%%% EXPRESSIONS %%%%%%%%%%%%%%%%%%%
-([L1,L2 | S], M, [OP|C]) => ([Result | S],M,C):-
-	literal([L1],_),literal([L2],_),
+(E,[L1,L2 | S], M, [OP|C]) => (E,[Result | S],M,C):-
+    literal([L1],_),literal([L2],_),
     member(OP,[+,-,*]),
-	Expression =.. [OP,L2,L1],
-	Result is Expression.
+    Expression =.. [OP,L2,L1],
+    Result is Expression.
 
 
-(S,M,[Exp | C]) => (S,M,[E1,E2,OP|C]):-
+(E,S,M,[Exp | C]) => (E,S,M,[E1,E2,OP|C]):-
     compound(Exp),
     Exp =.. [OP,E1,E2],
     member(OP,[+,-,*,=]).
     
 
-(S,M,[Exp | C]) => ([E1|S],M,[E2,OP|C]):-
+(E,S,M,[Exp | C]) => (E,[E1|S],M,[E2,OP|C]):-
     compound(Exp),
     Exp =.. [OP,E1,E2],
     variable([E1],_),
     member(OP,[:=]).
 
-([Lit,Var|S],Minit,[:= | C]) => (S,Mfin,C):-
+(E,[Lit,Var|S],Minit,[:= | C]) => (E,S,Mfin,C):-
     literal([Lit],_),
     variable([Var],_),
     update_memory(Var,Lit,Minit,Mfin).
 
-(S,M,[Literal | C]) => ([Literal | S],M,C):-
+(E,S,M,[Literal | C]) => (E,[Literal | S],M,C):-
     literal([Literal],_).
 
-(S, M, [Var | C]) => ([Val | S], M, C):-
+(E,S, M, [Var | C]) => (E,[Val | S], M, C):-
     variable([Var],_),
     read_memory(Var,M,Val).
 
 eval(Input, Output) :-
-	Input => Mid,
-	nl,nl,write("("),write(Input),write(")"),write(" => "),write("("),write(Mid),write(")"),
-	!,
-	eval(Mid, Output).
+    Input => Mid,
+    %   nl,nl,write("("),write(Input),write(")"),write(" => "),write("("),write(Mid),write(")"),
+    !,
+    eval(Mid, Output).
 eval(Output, Output).
 
 run(Program,Memory):-
-    eval(([],m{},[Program]), ([],Memory,[])).
+    eval((e{},[],m{},[Program]), (e{},[],Memory,[])).
 
