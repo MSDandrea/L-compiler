@@ -75,6 +75,18 @@ write_smc_state(S,M,C):-
     nl,
     write(C),nl.
 
+%%%%%% Declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+(E,S,M,[const(V,T,Exp) | C]) => (E,[V|S],M,[Exp,cnt|C]).
+(E,[N,V|S],M,[cnt | C]) => (E,[bnd(V,N)| S],M,C).
+(E,[bnd(V,N)| S],M,C) => (E,S,Mf,[]):-
+    bind(E,V,N,Em),
+    eval((Em,S,M,C),(Em,[],Mf,[])).
+
+(E,S,M,[var(V,T,Exp)| C]) => (E,[V|S],M,[Exp,vr|C]).
+(E,[N,V],M,[vr | C]) => (E,S,Mf,[]):-
+    mloc(E,M,V,N,Em,Mm),
+    eval((Em,S,Mm,C),(Em,[],Mf,[])).
+
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
 (E,S,M,[nil| C]) => (E,S,M,C).
 
@@ -140,6 +152,8 @@ write_smc_state(S,M,C):-
 (E,S, M, [Var | C]) => (E,[Val | S], M, C):-
     variable([Var],_),
     read_memory(Var,M,Val).
+
+
 
 eval(Input, Output) :-
     Input => Mid,
