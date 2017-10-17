@@ -52,19 +52,22 @@ read_memory(K,Dict,Expected):- get_dict(K,Dict,Expected).
 
 % environment_ops
 % bind constant to environment
-bind(Ei,K,V,Ef):- update_memory(K,V,Ei,Ef). 
+bind(Ei,K,V,Ef):- update_memory(K,V,Ei,Ef),!. 
+
+nloc(Mi,V,Id,Mf):-
+ next_space(Id),
+ update_memory(Id,V,Mi,Mf),!.
 
 % put value in memory and reference in environment
-mloc(Ei,Mi,K,V,Ef,Mf):- 
-    read_memory(K,Ei,loc(P)) -> % checks if variable is already in memory, updates value if it is
-        update_memory(P,V,Mi,Mf), Ef = Ei; 
-    next_space(Id),update_memory(K,loc(Id),Ei,Ef),update_memory(Id,V,Mi,Mf),!. % find new space in memory and create var
+%% mloc(Ei,Mi,K,V,Ef,Mf):- 
+%%     read_memory(K,Ei,loc(P)) -> % checks if variable is already in memory, updates value if it is
+%%         update_memory(P,V,Mi,Mf), Ef = Ei; 
+%%     next_space(Id),update_memory(K,loc(Id),Ei,Ef),update_memory(Id,V,Mi,Mf),!. % find new space in memory and create var
 
 %read value of key either in environment or memory
 get_value(K,E,M,V):- 
-    read_memory(K,E,loc(T)) ->
-        read_memory(T,M,V);
-    read_memory(K,E,V).
+    read_memory(K,E,loc(T)), read_memory(T,M,V).
+get_value(K,E,M,V):-  read_memory(K,E,V).
 
 %SMC transitions tran(initial_S, initial_M, initial_C, final_S, final_M, final_C).
 write_smc_state(S,M,C):-
@@ -78,14 +81,17 @@ write_smc_state(S,M,C):-
 %%%%%% Declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 (E,S,M,[const(V,T,Exp) | C]) => (E,[V|S],M,[Exp,cnt|C]).
 (E,[N,V|S],M,[cnt | C]) => (E,[bnd(V,N)| S],M,C).
+
+(E,S,M,[var(V,T,Exp)| C]) => (E,[V|S],M,[Exp,vr|C]).
+
+(E,[N,V | S],M,[vr | C]) => (E,[bnd(V,loc(Id)) |S],Mf,[]):-
+    nloc(M,N,Id,Mf).
+
 (E,[bnd(V,N)| S],M,C) => (E,S,Mf,[]):-
+    trace,
     bind(E,V,N,Em),
     eval((Em,S,M,C),(Em,[],Mf,[])).
 
-(E,S,M,[var(V,T,Exp)| C]) => (E,[V|S],M,[Exp,vr|C]).
-(E,[N,V],M,[vr | C]) => (E,S,Mf,[]):-
-    mloc(E,M,V,N,Em,Mm),
-    eval((Em,S,Mm,C),(Em,[],Mf,[])).
 
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
 (E,S,M,[nil| C]) => (E,S,M,C).
@@ -122,6 +128,9 @@ write_smc_state(S,M,C):-
 (E,[false,false | S],M,[or|C]) => (E,[false|S],M,C).
 
 %%%%%%% EXPRESSIONS %%%%%%%%%%%%%%%%%%%
+(E,S,M,[Literal | C]) => (E,[Literal | S],M,C):-
+    literal([Literal],_).
+
 (E,[L1,L2 | S], M, [OP|C]) => (E,[Result | S],M,C):-
     literal([L1],_),literal([L2],_),
     member(OP,[+,-,*]),
@@ -146,8 +155,6 @@ write_smc_state(S,M,C):-
     variable([Var],_),
     update_memory(Var,Lit,Minit,Mfin).
 
-(E,S,M,[Literal | C]) => (E,[Literal | S],M,C):-
-    literal([Literal],_).
 
 (E,S, M, [Var | C]) => (E,[Val | S], M, C):-
     variable([Var],_),
