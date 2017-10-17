@@ -8,37 +8,9 @@ atom_is_lower(N) :-
     atom_chars(N, [L]),
     char_type(L, lower);fail.
 
-
-
-expression --> literal.
-expression --> variable.
-expression --> expression , expression_tail.
-expression_tail --> [].
-expression_tail --> [+], expression,{write("Reconhecido como soma"),nl}.
-expression_tail --> [-], expression,{write("Reconhecido como subtração"),nl}.
-expression_tail --> [*], expression,{write("Reconhecido como multiplicação"),nl}.
-
 literal --> [I], {integer(I)}.
 variable --> [V], {atom_is_lower(V)}.
 truth_value--> [T],{member(T,[true,false])}.
-
-
-boolean_expression --> truth_value.
-boolean_expression --> [~], boolean_expression.
-boolean_expression --> expression, [=], expression.
-boolean_expression --> boolean_expression, [or], boolean_expression.
-
-command --> [if], boolean_expression, [then], command, [else], command.
-command --> [while], boolean_expression, [do], command.
-command --> [nil].
-command --> variable, [:=], expression.
-command --> command, [';'], command.
-
-
-% what_is
-what_is(I,O):-string_chars(I,A), literal(A,[]), O = "literal".
-what_is(I,O):-string_chars(I,A), variable(A,[]), O = "variable".
-what_is(I,O):-string_chars(I,A), expression(A,[]), O = "expression".
 
 next_space(S):-
     nb_getval(mpt,V),
@@ -54,17 +26,10 @@ read_memory(K,Dict,Expected):- get_dict(K,Dict,Expected).
 % bind constant to environment
 bind(Ei,K,V,Ef):- update_memory(K,V,Ei,Ef),!. 
 
-nloc(Mi,V,Id,Mf):-
+mloc(Mi,V,Id,Mf):-
  next_space(Id),
  update_memory(Id,V,Mi,Mf),!.
 
-% put value in memory and reference in environment
-%% mloc(Ei,Mi,K,V,Ef,Mf):- 
-%%     read_memory(K,Ei,loc(P)) -> % checks if variable is already in memory, updates value if it is
-%%         update_memory(P,V,Mi,Mf), Ef = Ei; 
-%%     next_space(Id),update_memory(K,loc(Id),Ei,Ef),update_memory(Id,V,Mi,Mf),!. % find new space in memory and create var
-
-%read value of key either in environment or memory
 get_value(K,E,M,V):- 
     read_memory(K,E,loc(T)), read_memory(T,M,V).
 get_value(K,E,M,V):-  read_memory(K,E,V).
@@ -85,7 +50,7 @@ write_smc_state(S,M,C):-
 (E,S,M,[var(V,T,Exp)| C]) => (E,[V|S],M,[Exp,vr|C]).
 
 (E,[N,V | S],M,[vr | C]) => (E,[bnd(V,loc(Id)) |S],Mf,[]):-
-    nloc(M,N,Id,Mf).
+    mloc(M,N,Id,Mf).
 
 (E,[bnd(V,N)| S],M,C) => (E,S,Mf,[]):-
     trace,
@@ -160,11 +125,8 @@ write_smc_state(S,M,C):-
     variable([Var],_),
     read_memory(Var,M,Val).
 
-
-
 eval(Input, Output) :-
     Input => Mid,
-    %   nl,nl,write("("),write(Input),write(")"),write(" => "),write("("),write(Mid),write(")"),
     !,
     eval(Mid, Output).
 eval(Output, Output).
