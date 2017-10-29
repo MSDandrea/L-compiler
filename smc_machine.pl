@@ -37,15 +37,7 @@ get_value(K,E,M,V):-  read_dictionary(K,E,V).
 set_value(K,E,Mi,V,Mf):-
     read_dictionary(K,E,loc(T)), update_dictionary(T,V,Mi,Mf).
 
-%SMC transitions tran(initial_S, initial_M, initial_C, final_S, final_M, final_C).
-write_smc_state(S,M,C):-
-    write("----ESTADO-ATUAL[SMC]----"),nl,
-    write(S),
-    nl,
-    write(M),
-    nl,
-    write(C),nl.
-
+%SMC transitions (initial_E, initial_S, initial_M, initial_C) =>(final_S, final_M, final_C).
 %%%%%% Declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 (E,S,M,[const(V,T,Exp) | C]) => (E,[V|S],M,[Exp,cnt|C]).
 (E,[N,V|S],M,[cnt | C]) => (E,[bnd(V,N)| S],M,C).
