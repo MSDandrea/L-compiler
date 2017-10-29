@@ -1,8 +1,6 @@
 :- op(0, xfx, =>).
 :- op(800, xfx, =>).
 
-:- nb_setval(mpt,0).
-
 % -- identifiers
 atom_is_lower(N) :-
     atom_chars(N, [L]),
@@ -12,11 +10,20 @@ literal --> [I], {integer(I)}.
 variable --> [V], {atom_is_lower(V)}.
 truth_value--> [T],{member(T,[true,false])}.
 
-next_space(S):-
-    nb_getval(mpt,V),
-    Vn is V+1,
-    nb_setval(mpt,Vn),
-    S is Vn.
+
+%max of list
+max_l([],0).
+max_l([X],X).
+max_l([X|Xs], M):- max_l(Xs, M), M >= X.
+max_l([X|Xs], X):- max_l(Xs, M), X >  M.
+
+next_space(S,M):-
+    dict_pairs(M,_,ListPairs),
+    pairs_keys_values(ListPairs,Keys,_),
+    max_l(Keys,Current),
+    S is Current+1,!.
+
+
 
 % memory ops_dic
 update_dictionary(K, V, Dict_in, Dict_out):-put_dict([K=V], Dict_in, Dict_out).
@@ -27,22 +34,22 @@ read_dictionary(K,Dict,Expected):- get_dict(K,Dict,Expected).
 bind(Ei,K,V,Ef):- update_dictionary(K,V,Ei,Ef). 
 
 mloc(Mi,V,Id,Mf):-
- next_space(Id),
+ next_space(Id,Mi),
  update_dictionary(Id,V,Mi,Mf),!.
 
 get_value(K,E,M,V):- 
     read_dictionary(K,E,loc(T)), read_dictionary(T,M,V).
-get_value(K,E,M,V):-  read_dictionary(K,E,V).
+get_value(K,E,_,V):-  read_dictionary(K,E,V).
 
 set_value(K,E,Mi,V,Mf):-
     read_dictionary(K,E,loc(T)), update_dictionary(T,V,Mi,Mf).
 
 %SMC transitions (initial_E, initial_S, initial_M, initial_C) =>(final_S, final_M, final_C).
 %%%%%% Declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-(E,S,M,[const(V,T,Exp) | C]) => (E,[V|S],M,[Exp,cnt|C]).
+(E,S,M,[const(V,_,Exp) | C]) => (E,[V|S],M,[Exp,cnt|C]).
 (E,[N,V|S],M,[cnt | C]) => (E,[bnd(V,N)| S],M,C).
 
-(E,S,M,[var(V,T,Exp)| C]) => (E,[V|S],M,[Exp,vr|C]).
+(E,S,M,[var(V,_,Exp)| C]) => (E,[V|S],M,[Exp,vr|C]).
 
 (E,[N,V | S],M,[vr | C]) => (E,[bnd(V,loc(Id)) |S],Mf,C):-
     mloc(M,N,Id,Mf).
@@ -87,6 +94,8 @@ set_value(K,E,Mi,V,Mf):-
 (E,[false,false | S],M,[or|C]) => (E,[false|S],M,C).
 
 %%%%%%% EXPRESSIONS %%%%%%%%%%%%%%%%%%%
+(E,S,M,[if_attr(Literal,Bool,Exp1,Exp2)|C]) => (E,S,M,[if(Bool,Literal:=Exp1,Literal:=Exp2)|C]).
+
 (E,S,M,[Literal | C]) => (E,[Literal | S],M,C):-
     literal([Literal],_).
 
