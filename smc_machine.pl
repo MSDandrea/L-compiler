@@ -46,6 +46,10 @@ set_value(K,E,Mi,V,Mf):-
 
 %SMC transitions (initial_E, initial_S, initial_M, initial_C) =>(final_S, final_M, final_C).
 %%%%%% Declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+(E,[bnd(V,N)| S],M,C) => (E,S,Mf,[]):-
+    bind(E,V,N,Em),
+    eval((Em,S,M,C),(Em,[],Mf,[])).
+    
 (E,S,M,[const(V,_,Exp) | C]) => (E,[V|S],M,[Exp,cnt|C]).
 (E,[N,V|S],M,[cnt | C]) => (E,[bnd(V,N)| S],M,C).
 
@@ -54,9 +58,6 @@ set_value(K,E,Mi,V,Mf):-
 (E,[N,V | S],M,[vr | C]) => (E,[bnd(V,loc(Id)) |S],Mf,C):-
     mloc(M,N,Id,Mf).
 
-(E,[bnd(V,N)| S],M,C) => (E,S,Mf,[]):-
-    bind(E,V,N,Em),
-    eval((Em,S,M,C),(Em,[],Mf,[])).
 
 
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
@@ -94,7 +95,10 @@ set_value(K,E,Mi,V,Mf):-
 (E,[false,false | S],M,[or|C]) => (E,[false|S],M,C).
 
 %%%%%%% EXPRESSIONS %%%%%%%%%%%%%%%%%%%
-(E,S,M,[if_attr(Literal,Bool,Exp1,Exp2)|C]) => (E,S,M,[if(Bool,Literal:=Exp1,Literal:=Exp2)|C]).
+(E,S,M,[if_exp(Bool,Exp1,Exp2)|C]) => (E,S,M,[Exp1, Exp2, Bool, if_exp|C]).
+(E,[ true,_,Sol1 |S],M,[if_exp| C]) => (E,[Sol1 | S],M,C).
+(E,[ false,Sol2,_ |S],M,[if_exp| C]) => (E,[Sol2 | S],M,C).
+
 
 (E,S,M,[Literal | C]) => (E,[Literal | S],M,C):-
     literal([Literal],_).
@@ -130,6 +134,7 @@ set_value(K,E,Mi,V,Mf):-
 
 eval(Input, Output) :-
     Input => Mid,
+    trace,
     !,
     eval(Mid, Output).
 eval(Output, Output).
