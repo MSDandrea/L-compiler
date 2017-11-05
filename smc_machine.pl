@@ -1,3 +1,4 @@
+:- [parser].
 :- op(0, xfx, =>).
 :- op(800, xfx, =>).
 
@@ -6,7 +7,7 @@ atom_is_lower(N) :-
     atom_chars(N, [L]),
     char_type(L, lower);fail.
 
-literal --> [I], {integer(I)}.
+integer --> [I], {integer(I)}.
 variable --> [V], {atom_is_lower(V)}.
 truth_value--> [T],{member(T,[true,false])}.
 
@@ -80,7 +81,7 @@ set_value(K,E,Mi,V,Mf):-
 (E,S,M,[equals(E1,E2) | C]) => (E,S,M,[E1,E2, =| C]).
 
 (E,[L1,L2 |S],M,[OP|C]) => (E,[Value | S],M,C):-
-    literal([L1],_),literal([L2],_),
+    integer([L1],_),integer([L2],_),
     member(OP,[=]),
     (call(L1=:=L2) ->   Value=true; Value=false).
                      
@@ -100,10 +101,10 @@ set_value(K,E,Mi,V,Mf):-
 
 
 (E,S,M,[Literal | C]) => (E,[Literal | S],M,C):-
-    literal([Literal],_).
+    integer([Literal],_).
 
 (E,[L1,L2 | S], M, [OP|C]) => (E,[Result | S],M,C):-
-    literal([L1],_),literal([L2],_),
+    integer([L1],_),integer([L2],_),
     member(OP,[+,-,*]),
     Expression =.. [OP,L2,L1],
     Result is Expression.
@@ -116,7 +117,7 @@ set_value(K,E,Mi,V,Mf):-
     variable([E1],_).
 
 (E,[Lit,Var|S],Minit,[:= | C]) => (E,S,Mfin,C):-
-    literal([Lit],_),
+    integer([Lit],_),
     variable([Var],_),
     set_value(Var,E,Minit,Lit,Mfin).
 
@@ -134,3 +135,5 @@ eval(Output, Output).
 run(Program,Memory):-
     eval((e{},[],m{},[Program]), (e{},[],Memory,[])).
 
+compile_run(String,M):-
+    ast(String,Tree), !, run(Tree,M).
