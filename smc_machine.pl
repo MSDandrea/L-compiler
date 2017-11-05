@@ -63,10 +63,7 @@ set_value(K,E,Mi,V,Mf):-
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
 (E,S,M,[nil| C]) => (E,S,M,C).
 
-(E,S,M,[Exp | C]) => (E,S,M,[E1,E2|C]):-
-    compound(Exp),
-    Exp =.. [OP,E1,E2],
-    member(OP,[;]).
+(E,S,M,[concat(E1,E2) | C]) => (E,S,M,[E1,E2|C]).
 
 (E, S, M, [if(B,P1,P2)|C]) => (E, [P1,P2|S], M, [B, if|C]).                 
 (E, S, M, [while(B,P1)|C]) => (E, [B, P1|S], M, [B, while|C]).      
@@ -79,6 +76,8 @@ set_value(K,E,Mi,V,Mf):-
 %%%%%%% BOOLEAN EXPRESSION %%%%%%%%%%%%
 (E, S,M,[Bool|C]) => (E, [Bool | S], M , C):-
     truth_value([Bool],_).      
+
+(E,S,M,[equals(E1,E2) | C]) => (E,S,M,[E1,E2, =| C]).
 
 (E,[L1,L2 |S],M,[OP|C]) => (E,[Value | S],M,C):-
     literal([L1],_),literal([L2],_),
@@ -110,17 +109,11 @@ set_value(K,E,Mi,V,Mf):-
     Result is Expression.
 
 
-(E,S,M,[Exp | C]) => (E,S,M,[E1,E2,OP|C]):-
-    compound(Exp),
-    Exp =.. [OP,E1,E2],
-    member(OP,[+,-,*,=]).
+(E,S,M,[algebra(E1,OP,E2) | C]) => (E,S,M,[E1,E2,OP|C]).
     
 
-(E,S,M,[Exp | C]) => (E,[E1|S],M,[E2,OP|C]):-
-    compound(Exp),
-    Exp =.. [OP,E1,E2],
-    variable([E1],_),
-    member(OP,[:=]).
+(E,S,M,[assign(E1,E2) | C]) => (E,[E1|S],M,[E2,:=|C]):-
+    variable([E1],_).
 
 (E,[Lit,Var|S],Minit,[:= | C]) => (E,S,Mfin,C):-
     literal([Lit],_),
@@ -134,7 +127,6 @@ set_value(K,E,Mi,V,Mf):-
 
 eval(Input, Output) :-
     Input => Mid,
-    trace,
     !,
     eval(Mid, Output).
 eval(Output, Output).
