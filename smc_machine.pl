@@ -64,7 +64,7 @@ set_value(K,E,Mi,V,Mf):-
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
 (E,S,M,[nil| C]) => (E,S,M,C).
 
-(E,S,M,[concat(E1,E2) | C]) => (E,S,M,[E1,E2|C]).
+(E,S,M,[sequence(E1,E2) | C]) => (E,S,M,[E1,E2|C]).
 
 (E, S, M, [if(B,P1,P2)|C]) => (E, [P1,P2|S], M, [B, if|C]).                 
 (E, S, M, [while(B,P1)|C]) => (E, [B, P1|S], M, [B, while|C]).      
@@ -136,4 +136,4 @@ run(Program,Memory):-
     eval((e{},[],m{},[Program]), (e{},[],Memory,[])).
 
 compile_run(String,M):-
-    ast(String,Tree), !, run(Tree,M).
+    ast(String,Tree), !, write(Tree), nl,nl, run(Tree,M).

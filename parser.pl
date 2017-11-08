@@ -23,13 +23,13 @@ ast(String,Tree):-
 not_reserved(A):- \+ member(A,[if,then,else,while,do]).
 
 literal(X) --> [X], { atom(X), not_reserved(X) }.
-type(T) --> [T], {member(T,[int,bool])}.
+type(T) --> [T], {member(T,[int])}.
 num(N) --> [N], { number(N) }.
 
 parser(Tree) --> program(Tree).
 
-program(concat(A,B)) --> declaration(A), [';'], program(B).
-program(concat(A,B)) --> command(A), [';'], program(B).
+program(sequence(A,B)) --> declaration(A), [';'], program(B).
+program(sequence(A,B)) --> command(A), [';'], program(B).
 program(B) --> command(B).
 
 
