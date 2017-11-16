@@ -24,11 +24,10 @@ next_space(S,M):-
     max_l(Keys,Current),
     S is Current+1,!.
 
-
-
 % memory ops_dic
 update_dictionary(K, V, Dict_in, Dict_out):-put_dict([K=V], Dict_in, Dict_out).
 read_dictionary(K,Dict,Expected):- get_dict(K,Dict,Expected). 
+delete_dictionary(Mi,K,Mf):- del_dict(K,Mi,_,Mf).
 
 % environment_ops
 % bind constant to environment
@@ -38,6 +37,11 @@ mloc(Mi,V,Id,Mf):-
  next_space(Id,Mi),
  update_dictionary(Id,V,Mi,Mf),!.
 
+free(Mi,loc(K),Mf):-
+ delete_dictionary(Mi,K,Mf).
+
+free(Mi,_,Mi).
+
 get_value(K,E,M,V):- 
     read_dictionary(K,E,loc(T)), read_dictionary(T,M,V).
 get_value(K,E,_,V):-  read_dictionary(K,E,V).
@@ -46,83 +50,91 @@ set_value(K,E,Mi,V,Mf):-
     read_dictionary(K,E,loc(T)), update_dictionary(T,V,Mi,Mf).
 
 %SMC transitions (initial_E, initial_S, initial_M, initial_C) =>(final_S, final_M, final_C).
+
 %%%%%% Declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-(E,[bnd(V,N)| S],M,C) => (E,S,Mf,[]):-
+(O,E,[bnd(V,N)| S],M,C) => (Of,E,S,Mf,[]):-
     bind(E,V,N,Em),
-    eval((Em,S,M,C),(Em,[],Mf,[])).
+    eval((O,Em,S,M,C),(Of,Em,[],Mm,[])),
+    free(Mm,N,Mf).
     
-(E,S,M,[const(V,_,Exp) | C]) => (E,[V|S],M,[Exp,cnt|C]).
-(E,[N,V|S],M,[cnt | C]) => (E,[bnd(V,N)| S],M,C).
+(O,E,S,M,[const(V,_,Exp) | C]) => (O,E,[V|S],M,[Exp,cnt|C]).
+(O,E,[N,V|S],M,[cnt | C]) => (O,E,[bnd(V,N)| S],M,C).
 
-(E,S,M,[var(V,_,Exp)| C]) => (E,[V|S],M,[Exp,vr|C]).
+(O,E,S,M,[var(V,_,Exp)| C]) => (O,E,[V|S],M,[Exp,vr|C]).
 
-(E,[N,V | S],M,[vr | C]) => (E,[bnd(V,loc(Id)) |S],Mf,C):-
+(O,E,[N,V | S],M,[vr | C]) => (O,E,[bnd(V,loc(Id)) |S],Mf,C):-
     mloc(M,N,Id,Mf).
 
 
 
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
-(E,S,M,[nil| C]) => (E,S,M,C).
+(O,E,S,M,[nil| C]) => (O,E,S,M,C).
 
-(E,S,M,[sequence(E1,E2) | C]) => (E,S,M,[E1,E2|C]).
+(O,E,S,M,[sequence(E1,E2) | C]) => (O,E,S,M,[E1,E2|C]).
 
-(E, S, M, [if(B,P1,P2)|C]) => (E, [P1,P2|S], M, [B, if|C]).                 
-(E, S, M, [while(B,P1)|C]) => (E, [B, P1|S], M, [B, while|C]).      
+(O,E, S, M, [if(B,P1,P2)|C]) => (O,E, [P1,P2|S], M, [B, if|C]).                 
+(O,E, S, M, [while(B,P1)|C]) => (O,E, [B, P1|S], M, [B, while|C]).      
 
-(E, [true, P1, _|S], M, [if|C]) => (E, S, M, [P1|C]).                      
-(E, [false, _, P2|S], M, [if|C]) => (E, S, M, [P2|C]).                     
-(E, [true, B, P1|S], M, [while|C]) => (E, S, M, [P1,while(B, P1)|C]).      
-(E, [false, _, _|S], M, [while|C]) => (E, S, M, C).  
+(O,E, [true, P1, _|S], M, [if|C]) => (O,E, S, M, [P1|C]).                      
+(O,E, [false, _, P2|S], M, [if|C]) => (O,E, S, M, [P2|C]).                     
+(O,E, [true, B, P1|S], M, [while|C]) => (O,E, S, M, [P1,while(B, P1)|C]).      
+(O,E, [false, _, _|S], M, [while|C]) => (O,E, S, M, C).
+
+(O,E,[Val | S],M,[print | C]) => ([Val | O],E,S,M,C).
+(O,E,S,M,[print(Exp)|C]) => (O,E,S,M,[Exp, print | C]).
+
+(O,E,S,M,[exit(Exp)|C]) => (O,E,S,M,[Exp, exit | C]).
+(O,E,[Val | S],M,[exit | C]) => ([Val | O],E,[],M,[]).
 
 %%%%%%% BOOLEAN EXPRESSION %%%%%%%%%%%%
-(E, S,M,[Bool|C]) => (E, [Bool | S], M , C):-
+(O,E, S,M,[Bool|C]) => (O,E, [Bool | S], M , C):-
     truth_value([Bool],_).      
 
-(E,S,M,[equals(E1,E2) | C]) => (E,S,M,[E1,E2, =| C]).
+(O,E,S,M,[equals(E1,E2) | C]) => (O,E,S,M,[E1,E2, =| C]).
 
-(E,[L1,L2 |S],M,[OP|C]) => (E,[Value | S],M,C):-
+(O,E,[L1,L2 |S],M,[OP|C]) => (O,E,[Value | S],M,C):-
     integer([L1],_),integer([L2],_),
     member(OP,[=]),
     (call(L1=:=L2) ->   Value=true; Value=false).
                      
-(E,S,M,[not(B) | C]) => (E,S,M,[B, not| C]).
-(E, [true | S],M,[not | C]) => (E, [false | S],M,C).
-(E, [false | S],M,[not | C]) => (E, [true | S],M,C).
+(O,E,S,M,[not(B) | C]) => (O,E,S,M,[B, not| C]).
+(O,E, [true | S],M,[not | C]) => (O,E, [false | S],M,C).
+(O,E, [false | S],M,[not | C]) => (O,E, [true | S],M,C).
 
-(E,S,M,[or(B1,B2)| C]) => (E,S,M,[B1,B2,or| C]).
-(E,[true,_ |S],M,[or|C]) => (E,[true | S],M,C).
-(E,[_,true |S],M,[or|C]) => (E,[true | S],M,C).
-(E,[false,false | S],M,[or|C]) => (E,[false|S],M,C).
+(O,E,S,M,[or(B1,B2)| C]) => (O,E,S,M,[B1,B2,or| C]).
+(O,E,[true,_ |S],M,[or|C]) => (O,E,[true | S],M,C).
+(O,E,[_,true |S],M,[or|C]) => (O,E,[true | S],M,C).
+(O,E,[false,false | S],M,[or|C]) => (O,E,[false|S],M,C).
 
 %%%%%%% EXPRESSIONS %%%%%%%%%%%%%%%%%%%
-(E,S,M,[if_exp(Bool,Exp1,Exp2)|C]) => (E,S,M,[Exp1, Exp2, Bool, if_exp|C]).
-(E,[ true,_,Sol1 |S],M,[if_exp| C]) => (E,[Sol1 | S],M,C).
-(E,[ false,Sol2,_ |S],M,[if_exp| C]) => (E,[Sol2 | S],M,C).
+(O,E,S,M,[if_exp(Bool,Exp1,Exp2)|C]) => (O,E,S,M,[Exp1, Exp2, Bool, if_exp|C]).
+(O,E,[ true,_,Sol1 |S],M,[if_exp| C]) => (O,E,[Sol1 | S],M,C).
+(O,E,[ false,Sol2,_ |S],M,[if_exp| C]) => (O,E,[Sol2 | S],M,C).
 
 
-(E,S,M,[Literal | C]) => (E,[Literal | S],M,C):-
+(O,E,S,M,[Literal | C]) => (O,E,[Literal | S],M,C):-
     integer([Literal],_).
 
-(E,[L1,L2 | S], M, [OP|C]) => (E,[Result | S],M,C):-
+(O,E,[L1,L2 | S], M, [OP|C]) => (O,E,[Result | S],M,C):-
     integer([L1],_),integer([L2],_),
     member(OP,[+,-,*]),
     Expression =.. [OP,L2,L1],
     Result is Expression.
 
 
-(E,S,M,[algebra(E1,OP,E2) | C]) => (E,S,M,[E1,E2,OP|C]).
+(O,E,S,M,[algebra(E1,OP,E2) | C]) => (O,E,S,M,[E1,E2,OP|C]).
     
 
-(E,S,M,[assign(E1,E2) | C]) => (E,[E1|S],M,[E2,:=|C]):-
+(O,E,S,M,[assign(E1,E2) | C]) => (O,E,[E1|S],M,[E2,:=|C]):-
     variable([E1],_).
 
-(E,[Lit,Var|S],Minit,[:= | C]) => (E,S,Mfin,C):-
+(O,E,[Lit,Var|S],Minit,[:= | C]) => (O,E,S,Mfin,C):-
     integer([Lit],_),
     variable([Var],_),
     set_value(Var,E,Minit,Lit,Mfin).
 
 
-(E,S, M, [Var | C]) => (E,[Val | S], M, C):-
+(O,E,S, M, [Var | C]) => (O,E,[Val | S], M, C):-
     variable([Var],_),
     get_value(Var,E,M,Val).
 
@@ -132,8 +144,8 @@ eval(Input, Output) :-
     eval(Mid, Output).
 eval(Output, Output).
 
-run(Program,Memory):-
-    eval((e{},[],m{},[Program]), (e{},[],Memory,[])).
+run(Program,Memory,Output):-
+    eval(([],e{},[],m{},[Program]), (Rev_Output,e{},[],Memory,[])),reverse(Rev_Output,Output).
 
-compile_run(String,M):-
-    ast(String,Tree), !, write(Tree), nl,nl, run(Tree,M).
+compile_run(String,M,O):-
+    ast(String,Tree), !, write(Tree), nl,nl, run(Tree,M,O).

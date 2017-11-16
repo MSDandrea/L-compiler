@@ -9,5 +9,6 @@ main:-
 		write(String), nl, nl,
 		split_string(String, "\n", "", String2),
 		atomic_list_concat(String2, '', Atom), atom_string(Atom, Programa),
-		compile_run(Programa,M),
-		write(M),nl.
+		compile_run(Programa,M,O),
+		write(M),nl,
+		write(O),nl.

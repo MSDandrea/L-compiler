@@ -54,3 +54,5 @@ command(nil) --> [].
 command(assign(A,B)) --> literal(A), [':='], expression(B).
 command(if(B,Cmd1,Cmd2)) --> [if], bool_expression(B), [then], program(Cmd1), [else], program(Cmd2).
 command(while(B,Cmd)) --> [while], bool_expression(B), [do], program(Cmd).
+command(print(Exp)) --> [print], expression(Exp).
+command(exit(Exp)) --> [exit], expression(Exp).
