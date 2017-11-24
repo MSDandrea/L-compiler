@@ -49,6 +49,12 @@ get_value(K,E,_,V):-  read_dictionary(K,E,V).
 set_value(K,E,Mi,V,Mf):-
     read_dictionary(K,E,loc(T)), update_dictionary(T,V,Mi,Mf).
 
+
+build_param(Dict_in,[],[],Dict_in).
+build_param(Dict_in,[HeadP | TailP],[HeadF | TailF],Dict_out):-
+    bind(Dict_in,HeadF,HeadP,Dict_med),
+    build_param(Dict_med,TailP,TailF,Dict_out).
+
 %SMC transitions (initial_E, initial_S, initial_M, initial_C) =>(final_S, final_M, final_C).
 
 %%%%%% Declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -65,6 +71,7 @@ set_value(K,E,Mi,V,Mf):-
 (O,E,[N,V | S],M,[vr | C]) => (O,E,[bnd(V,loc(Id)) |S],Mf,C):-
     mloc(M,N,Id,Mf).
 
+(O,E,S,M,[proc(I,F,sequence(A,B)) | C]) => (O,E,[bnd(I,abs(F,sequence(A,B))) |S ],M,C).
 
 
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
@@ -79,6 +86,12 @@ set_value(K,E,Mi,V,Mf):-
 (O,E, [false, _, P2|S], M, [if|C]) => (O,E, S, M, [P2|C]).                     
 (O,E, [true, B, P1|S], M, [while|C]) => (O,E, S, M, [P1,while(B, P1)|C]).      
 (O,E, [false, _, _|S], M, [while|C]) => (O,E, S, M, C).
+
+(O,E,S,M,[call(I,P)|C]) => (Of,E,S,M,C):-
+  get_value(I,E,M,abs(F,Seq)),
+  build_param(E,P,F,Em),
+  eval((O,Em,S,M,[Seq]),(Of,Em,[],_,[])).
+
 
 (O,E,[Val | S],M,[print | C]) => ([Val | O],E,S,M,C).
 (O,E,S,M,[print(Exp)|C]) => (O,E,S,M,[Exp, print | C]).
@@ -138,8 +151,8 @@ set_value(K,E,Mi,V,Mf):-
     variable([Var],_),
     get_value(Var,E,M,Val).
 
-eval(Input, Output) :-
-    Input => Mid,
+eval((O,E,S,M,C), Output) :-
+    (O,E,S,M,C) => Mid,
     !,
     eval(Mid, Output).
 eval(Output, Output).
