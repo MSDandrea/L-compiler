@@ -50,10 +50,16 @@ set_value(K,E,Mi,V,Mf):-
     read_dictionary(K,E,loc(T)), update_dictionary(T,V,Mi,Mf).
 
 
-build_param(Dict_in,[],[],Dict_in).
-build_param(Dict_in,[HeadP | TailP],[HeadF | TailF],Dict_out):-
-    bind(Dict_in,HeadF,HeadP,Dict_med),
-    build_param(Dict_med,TailP,TailF,Dict_out).
+build_param(Mem_in,Env_in,_,[],Env_in,Mem_in).
+build_param(Mem_in,Env_in,[HeadP | TailP],[HeadF | TailF],Env_out,Mem_out,):-
+    mloc(Mem_in,)
+    
+
+
+append([],C,C).
+append([Head|Tail],C,Cf):-
+    Cm = [Head | C],
+    append(Tail,Cm,Cf).
 
 %SMC transitions (initial_E, initial_S, initial_M, initial_C) =>(final_S, final_M, final_C).
 
@@ -87,10 +93,11 @@ build_param(Dict_in,[HeadP | TailP],[HeadF | TailF],Dict_out):-
 (O,E, [true, B, P1|S], M, [while|C]) => (O,E, S, M, [P1,while(B, P1)|C]).      
 (O,E, [false, _, _|S], M, [while|C]) => (O,E, S, M, C).
 
-(O,E,S,M,[call(I,P)|C]) => (Of,E,S,M,C):-
-  get_value(I,E,M,abs(F,Seq)),
-  build_param(E,P,F,Em),
-  eval((O,Em,S,M,[Seq]),(Of,Em,[],_,[])).
+(O,E,S,M,[call(I,P)|C]) => (O,E,S,M,[params(P), call(I) | C]).
+(O,E,S,M,[params(P)|C]) => (O,E,S,M,Cf):-
+    append(P,C,Cf).
+(O,E,S,M,[call(I)|C]) => (O,E,S,M,C):-
+    get_value(I,E,M,abs(F,Seq)),
 
 
 (O,E,[Val | S],M,[print | C]) => ([Val | O],E,S,M,C).
