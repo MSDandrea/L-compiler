@@ -50,10 +50,18 @@ set_value(K,E,Mi,V,Mf):-
     read_dictionary(K,E,loc(T)), update_dictionary(T,V,Mi,Mf).
 
 
-build_param(Mem_in,Env_in,_,[],Env_in,Mem_in).
-build_param(Mem_in,Env_in,[HeadP | TailP],[HeadF | TailF],Env_out,Mem_out,):-
-    mloc(Mem_in,)
-    
+build_param(Mem_in,Env_in,P,[],Env_in,Mem_in,P).
+build_param(Mem_in,Env_in,[HeadP | TailP],[HeadF | TailF],Env_out,Mem_out,S):-
+    mloc(Mem_in,HeadP,Id,Mem_med),
+    bind(Env_in,HeadF,loc(Id),Env_med),
+    build_param(Mem_med,Env_med,TailP,TailF,Env_out,Mem_out,S).
+
+clean_param(Env,Mem_in,[],Mem_in).
+clean_param(Env,Mem_in,[ParamHead|ParamTail],Mem_out):-
+    read_dictionary(ParamHead,Env,Value),
+    free(Mem_in,Value,Mem_mid),
+    clean_param(Env,Mem_mid,ParamTail,Mem_out).
+
 
 
 append([],C,C).
@@ -96,8 +104,13 @@ append([Head|Tail],C,Cf):-
 (O,E,S,M,[call(I,P)|C]) => (O,E,S,M,[params(P), call(I) | C]).
 (O,E,S,M,[params(P)|C]) => (O,E,S,M,Cf):-
     append(P,C,Cf).
-(O,E,S,M,[call(I)|C]) => (O,E,S,M,C):-
+
+(O,E,S,M,[call(I)|C]) => (Of,E,Sm,Mc,C):-
     get_value(I,E,M,abs(F,Seq)),
+    reverse(F,F_stack),
+    build_param(M,E,S,F_stack,Em,Mm,Sm),
+    eval((O,Em,[],Mm,[Seq]),(Of,Em,[],Mf,[])),
+    clean_param(Em,Mf,F_stack,Mc).
 
 
 (O,E,[Val | S],M,[print | C]) => ([Val | O],E,S,M,C).
