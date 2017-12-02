@@ -1,7 +1,10 @@
-var z int = 2 ; 
-proc sp ( val x , val y ) begin 
- print x + y ; 
- z := z + 2 ;  
+func factorial ( val n ) begin 
+ if n = 1 then begin 
+  return 1 ; end  
+ else begin 
+  return n * factorial ( n - 1 ) ; 
+ end ; 
 end ; 
-sp ( z + 1 , z ) ; 
+var z int = 10 ; 
+z := factorial ( z ) ; 
 print z ; 

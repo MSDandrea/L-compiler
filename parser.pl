@@ -20,7 +20,7 @@ ast(String,Tree):-
     reverse(Rev,True_List),
     phrase(parser(Tree),True_List).
 
-not_reserved(A):- \+ member(A,[if,then,else,while,do,begin,end]).
+not_reserved(A):- \+ member(A,[if,then,else,while,do,begin,end,return,proc,func]).
 
 literal(X) --> [X], { atom(X), not_reserved(X) }.
 type(T) --> [T], {member(T,[int])}.
@@ -46,12 +46,13 @@ program(A) --> declaration(A).
 declaration(const(Lit,Type,Exp)) --> [const], literal(Lit), type(Type), ['='], expression(Exp).
 declaration(var(Lit,Type,Exp)) --> [var], literal(Lit), type(Type), ['='], expression(Exp).
 declaration(proc(Id,Formal,Seq)) --> [proc], literal(Id), ['('], formal_list(Formal), [')'], [begin], program(Seq), [end].
+declaration(func(Id,Formal,Seq)) --> [func], literal(Id), ['('], formal_list(Formal), [')'], [begin], program(Seq), [end].
 
 expression(A) --> num(A).
 expression(A) --> literal(A).
+expression(eval(Id,Param)) --> literal(Id), ['('], param_list(Param), [')']. 
 expression(if_exp(B,Exp1,Exp2)) --> [if], bool_expression(B), [then], expression(Exp1), [else], expression(Exp2).
 expression(algebra(A,OP,B)) --> expression(A), [OP], expression(B), {member(OP,['+','-','*'])}.
-
  
 bool_expression(true) --> [true]. 
 bool_expression(false) --> [false].
@@ -67,4 +68,5 @@ command(if(B,Cmd1,Cmd2)) --> [if], bool_expression(B), [then], [begin], program(
 command(while(B,Cmd)) --> [while], bool_expression(B), [do], [begin], program(Cmd), [end].
 command(print(Exp)) --> [print], expression(Exp).
 command(exit(Exp)) --> [exit], expression(Exp).
+command(return(Exp)) --> [return], expression(Exp).
 command(call(Id,Param)) --> literal(Id), ['('], param_list(Param), [')'].

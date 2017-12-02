@@ -86,6 +86,7 @@ append([Head|Tail],C,Cf):-
     mloc(M,N,Id,Mf).
 
 (O,E,S,M,[proc(I,F,sequence(A,B)) | C]) => (O,E,[bnd(I,abs(F,sequence(A,B))) |S ],M,C).
+(O,E,S,M,[func(I,F,sequence(A,B)) | C]) => (O,E,[bnd(I,absf(F,sequence(A,B))) |S ],M,C).
 
 
 %%%%%%% COMMANDS %%%%%%%%%%%%%%%%%%%%%%
@@ -119,6 +120,9 @@ append([Head|Tail],C,Cf):-
 (O,E,S,M,[exit(Exp)|C]) => (O,E,S,M,[Exp, exit | C]).
 (O,E,[Val | S],M,[exit | C]) => ([Val | O],E,[],M,[]).
 
+(O,E,S,M,[ret | C]) => (O,E,S,M,[]).
+(O,E,S,M,[return(Exp)|C]) => (O,E,S,M,[Exp, ret | C]).
+
 %%%%%%% BOOLEAN EXPRESSION %%%%%%%%%%%%
 (O,E, S,M,[Bool|C]) => (O,E, [Bool | S], M , C):-
     truth_value([Bool],_).      
@@ -144,6 +148,15 @@ append([Head|Tail],C,Cf):-
 (O,E,[ true,_,Sol1 |S],M,[if_exp| C]) => (O,E,[Sol1 | S],M,C).
 (O,E,[ false,Sol2,_ |S],M,[if_exp| C]) => (O,E,[Sol2 | S],M,C).
 
+(O,E,S,M,[eval(Id,Param)|C]) => (O,E,S,M,[params(Param), eval(Id)|C]).
+
+
+(O,E,S,M,[eval(I)|C]) => (Of,E,[V|Sm],Mc,C):-
+    get_value(I,E,M,absf(F,Seq)),
+    reverse(F,F_stack),
+    build_param(M,E,S,F_stack,Em,Mm,Sm),
+    eval((O,Em,[],Mm,[Seq]),(Of,Em,[V],Mf,[])),
+    clean_param(Em,Mf,F_stack,Mc).
 
 (O,E,S,M,[Literal | C]) => (O,E,[Literal | S],M,C):-
     integer([Literal],_).
