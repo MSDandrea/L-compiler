@@ -31,8 +31,7 @@ formal_tail([]) --> [].
 formal_tail(A) --> [','], formal_list(A).
 formal_list([Head|Tail]) --> formal(Head), formal_tail(Tail). 
 
-param(X) --> literal(X).
-param(X) --> num(X).
+param(X) --> expression(X).
 param_tail([]) --> [].
 param_tail(A) --> [','], param_list(A).
 param_list([Head|Tail]) --> param(Head), param_tail(Tail). 
